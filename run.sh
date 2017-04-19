@@ -29,6 +29,24 @@ for upstream in $UPSTREAMS; do
     UPSTREAM_STR=`echo -e "$UPSTREAM_STR\n        server $upstream;"`
 done
 
+
+TNT_HOSTS=$(echo $TNT_HOSTS | tr "," "\n" | tr -d " ")
+
+TNT_HOSTS_STR=""
+
+for tnt_host in $TNT_HOSTS; do
+    TNT_HOST_STR=`echo -e "$TNT_HOST_STR,\"$tnt_host\""`
+done
+
+# remove leading comma
+TNT_HOST_STR=`echo "$TNT_HOST_STR" | cut -c 2-`
+
+if [ -z "$TNT_HOST_STR" ]; then
+    TNT_HOST_STR="tnt_hosts=nil"
+else
+    TNT_HOST_STR="tnt_hosts={$TNT_HOST_STR}"
+fi
+
 mkdir -p /app/logs
 
 cat > /app/nginx.conf <<-EOF
@@ -52,7 +70,9 @@ stream {
     init_worker_by_lua_block {
         ngx.log(ngx.ERR, "path: " .. package.path)
         local sentinel = require("tarantool-sentinel")
-        sentinel.watch({user="guest"});
+        $TNT_HOST_STR
+
+        sentinel.watch({user="guest", tnt_hosts=tnt_hosts});
     }
 }
 EOF

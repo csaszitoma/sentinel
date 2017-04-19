@@ -92,7 +92,7 @@ local function dict_set(dict, key, value)
     dict:set(key, mp.pack(value))
 end
 
-local function check(user, password)
+local function check(user, password, tnt_hosts)
     local peers = get_peers("tarantool")
     local connections = {}
     local dict = ngx.shared.tarantool
@@ -103,6 +103,11 @@ local function check(user, password)
     for i,peer in ipairs(peers) do
         local host, port = parse_host_port(peer.name)
         port = port or 3301
+
+        if tnt_hosts then
+            host, port = parse_host_port(tnt_hosts[i])
+            port = port or 3301
+        end
 
         local tar, err = tnt:new({
             host = host,
@@ -116,7 +121,7 @@ local function check(user, password)
 
         local res, err = tar:connect()
         if res == nil then
-            ngx.log(ngx.ERR, "Failed to connect to " .. peer.name .. " : "..err)
+            ngx.log(ngx.ERR, "Failed to connect to " .. host .. ":" .. port .. " : "..err)
             failure_count[i] = (failure_count[i] or 0) + 1
         else
             connections[i] = tar
@@ -207,9 +212,13 @@ local function watch(params)
     local user = params.user
     local password = params.password
     local delay = params.delay or 5
+    local tnt_hosts = params.tnt_hosts
 
     local function timer()
-        pcall(function() check(user, password) end)
+        local status, err = pcall(function() check(user, password, tnt_hosts) end)
+        if err then
+            ngx.log(ngx.ERR, err)
+        end
         ngx.timer.at(delay, timer)
     end
 
