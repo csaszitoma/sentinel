@@ -214,6 +214,12 @@ local function watch(params)
     local delay = params.delay or 5
     local tnt_hosts = params.tnt_hosts
 
+    -- Work around for tarantool 1.6 that doesn't support auth packets
+    -- with 'guest' user
+    if user == "guest" then
+        user = nil
+    end
+
     local function timer()
         local status, err = pcall(function() check(user, password, tnt_hosts) end)
         if err then
