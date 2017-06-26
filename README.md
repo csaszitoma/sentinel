@@ -7,7 +7,7 @@ and turns "non-leader" instances read only.
 
 The sentinel handles the usual problem of updating tuples with the
 same primary key on 2 master-master instances. In a usual case it
-leads to broken replication. But since sentinel makes keeps one
+leads to broken replication. But since the sentinel keeps only one
 instance read/write, this scenario is unlikely.
 
 ## Requirement
